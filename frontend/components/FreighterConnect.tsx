@@ -21,15 +21,10 @@ export default function FreighterConnect({
                 return;
             }
             try {
-                // @ts-ignore
-                const key = await getAddress();
-                if (key && typeof key === 'string') {
-                    setAddress(key);
-                    onConnect(key);
-                } else if (key && typeof key === 'object' && 'address' in key) {
-                    const addr = (key as any).address;
-                    setAddress(addr);
-                    onConnect(addr);
+                const result = await getAddress();
+                if (result && result.address) {
+                    setAddress(result.address);
+                    onConnect(result.address);
                 }
             } catch (e) {
                 console.error("Failed to get address", e);
@@ -49,30 +44,22 @@ export default function FreighterConnect({
             console.log("Forcing permission request...");
             await setAllowed(); // Force the permission popup
 
-            console.log("Requesting address from Freighter...");
-            // @ts-ignore
-            const key = await getAddress();
-            console.log("Freighter response:", key);
+            const result = await getAddress();
+            console.log("Freighter response:", result);
 
-            if (!key || key === "") {
+            const addr = typeof result === 'string' ? result : result?.address;
+
+            if (!addr || addr === "") {
                 alert("Address is still empty. Please ensure you clicked 'Share Address' in the Freighter popup.");
                 return;
             }
 
-            if (typeof key === 'string') {
-                setAddress(key);
-                onConnect(key);
-            } else if (typeof key === 'object' && 'address' in key) {
-                const addr = (key as any).address;
-                setAddress(addr);
-                onConnect(addr);
-            } else {
-                console.warn("Unexpected key format:", key);
-                alert("Connected, but received unexpected address format.");
-            }
-        } catch (e: any) {
+            setAddress(addr);
+            onConnect(addr);
+        } catch (e: unknown) {
             console.error("Freighter Connection Failed:", e);
-            alert(`Connection Failed: ${e.message || e}`);
+            const message = e instanceof Error ? e.message : String(e);
+            alert(`Connection Failed: ${message}`);
         }
     };
 

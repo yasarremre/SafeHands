@@ -10,6 +10,7 @@ export default function CreateEscrowForm({
     clientAddress: string;
 }) {
     const [freelancer, setFreelancer] = useState("");
+    const [arbiter, setArbiter] = useState("");
     const [amount, setAmount] = useState("");
     const [loading, setLoading] = useState(false);
 
@@ -19,13 +20,17 @@ export default function CreateEscrowForm({
 
         setLoading(true);
         try {
-            await deposit(clientAddress, freelancer, amount);
+            // Default arbiter to client if empty
+            const arbiterAddr = arbiter || clientAddress;
+            await deposit(clientAddress, freelancer, arbiterAddr, amount);
             alert("Escrow created successfully!");
             setFreelancer("");
+            setArbiter("");
             setAmount("");
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            alert(`Failed to create escrow: ${err.message}`);
+            const message = err instanceof Error ? err.message : String(err);
+            alert(`Failed to create escrow: ${message}`);
         } finally {
             setLoading(false);
         }
@@ -57,6 +62,19 @@ export default function CreateEscrowForm({
                         className="w-full bg-white border-2 border-black p-4 font-mono focus:outline-none focus:ring-4 focus:ring-yellow-400 transition-all placeholder:text-gray-400"
                         placeholder="G..."
                         required
+                        pattern="G[A-Z0-9]{55}"
+                        title="Must be a valid Stellar Public Key starting with 'G' (56 chars)"
+                    />
+                </div>
+
+                <div>
+                    <label className="block font-black mb-2 uppercase text-sm">Arbiter Address (Optional)</label>
+                    <input
+                        type="text"
+                        value={arbiter}
+                        onChange={(e) => setArbiter(e.target.value)}
+                        className="w-full bg-white border-2 border-black p-4 font-mono focus:outline-none focus:ring-4 focus:ring-yellow-400 transition-all placeholder:text-gray-400"
+                        placeholder="G... (Defaults to Self/Client if empty)"
                     />
                 </div>
 

@@ -1,35 +1,30 @@
 # Code Review Report
-**Date:** 2026-02-09
+**Date:** 2026-02-11 (Updated)
 **Scope:** Smart Contract (`contracts/`) & Frontend (`frontend/`)
 
 ## Summary
-The codebase follows a clear, modular architecture. Security practices in the Smart Contract are generally sound, enforcing authorization checks. Frontend implementation uses modern Next.js patterns.
+The codebase follows a clear, modular architecture. Security practices in the Smart Contract are sound, enforcing authorization checks on all state-changing methods.
 
 ## 🔴 Critical (Must Fix)
 - **None identified.** Authorization checks (`require_auth`) are present on all state-changing contract methods.
 
-## 🟡 Warnings (Should Fix)
-1.  **Contract - Integer Overflow**:
-    -   **Location**: `contracts/src/lib.rs: deposit`
-    -   **Problem**: Escrow ID increment uses `+ 1` without overflow check.
-    -   **Risk**: If `u64` wraps, IDs could collide.
-    -   **Fix**: Use `checked_add` or ensure `u64` limit is unreachable (unlikely for this purpose but good practice).
+## 🟡 Previously Identified — Now Fixed ✅
+1.  **Contract - Integer Overflow** → Fixed: Uses `checked_add` for escrow ID increment.
+2.  **Frontend - Address Encoding** → Fixed: All contract calls now use `new Address().toScVal()`.
+3.  **Frontend - Stale Metadata** → Fixed: Title/description updated from "Create Next App".
+4.  **Frontend - Dark Mode Conflict** → Fixed: Dark mode CSS removed.
+5.  **Frontend - EscrowState Type** → Fixed: All 5 states now supported.
+6.  **Frontend - Missing UI Actions** → Fixed: Cancel, Dispute, Resolve buttons added.
+7.  **Frontend - Unused Imports** → Fixed: Removed `getAddress` from soroban.ts.
+8.  **Contract - Event Emission** → Already implemented on deposit, release, cancel, dispute, resolve.
 
-2.  **Frontend - Error Handling**:
-    -   **Location**: `frontend/utils/soroban.ts`
-    -   **Problem**: `JSON.stringify(response)` might fail if response is circular or too large.
-    -   **Suggestion**: Log specific fields of the error response.
-
-3.  **Frontend - Simulation Logic**:
-    -   **Location**: `frontend/components/EscrowList.tsx`
-    -   **Problem**: Still uses `setTimeout` simulation.
-    -   **Suggestion**: Replace with actual `get_escrow` contract calls once deployed.
-
-## 🔵 Suggestions (Consider)
-1.  **Contract - Event Emission**:
-    -   **Suggestion**: Emit Soroban events (`env.events().publish()`) on Deposit and Release for off-chain indexing.
+## 🔵 Suggestions (Consider for Future)
+1.  **Transaction Polling**: After `submitTx`, poll for transaction result instead of returning `PENDING`.
+2.  **Toast Notifications**: Replace `alert()` calls with a toast notification system.
+3.  **Loading Skeletons**: Add skeleton UI states while escrows are loading.
 
 ## ✅ Positive Observations
--   **Security**: Strict `require_auth` usage in `deposit` and `approve`.
--   **Architecture**: Separation of concerns between `EscrowCard` (UI) and `soroban.ts` (Logic).
--   **UX**: Neo-Brutalist design provides clear visual feedback for state changes.
+-   **Security**: Strict `require_auth` on all state-changing functions.
+-   **Architecture**: Clean FSM pattern with 5 states and clear transitions.
+-   **Test Coverage**: 8 tests including edge cases (zero amount, unauthorized, double approval).
+-   **UX**: Neo-Brutalist design with clear visual feedback for all 5 states.

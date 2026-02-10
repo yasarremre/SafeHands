@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { isConnected, getAddress, setAllowed } from "@stellar/freighter-api";
+import toast from "react-hot-toast";
 
 export default function FreighterConnect({
     onConnect,
@@ -36,7 +37,7 @@ export default function FreighterConnect({
     const connectWallet = async () => {
         console.log("Connect Wallet clicked");
         if (!isWalletInstalled) {
-            alert("Freighter wallet is not detected. Opening download page...");
+            toast.error("Freighter wallet is not detected. Opening download page...");
             window.open("https://www.freighter.app/", "_blank");
             return;
         }
@@ -50,7 +51,7 @@ export default function FreighterConnect({
             const addr = typeof result === 'string' ? result : result?.address;
 
             if (!addr || addr === "") {
-                alert("Address is still empty. Please ensure you clicked 'Share Address' in the Freighter popup.");
+                toast.error("Address is still empty. Please ensure you clicked 'Share Address' in the Freighter popup.");
                 return;
             }
 
@@ -59,7 +60,7 @@ export default function FreighterConnect({
         } catch (e: unknown) {
             console.error("Freighter Connection Failed:", e);
             const message = e instanceof Error ? e.message : String(e);
-            alert(`Connection Failed: ${message}`);
+            toast.error(`Connection Failed: ${message}`);
         }
     };
 

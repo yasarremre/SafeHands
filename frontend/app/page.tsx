@@ -8,17 +8,23 @@ import { ShieldCheck } from "lucide-react";
 
 export default function Home() {
   const [userAddress, setUserAddress] = useState<string>("");
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleEscrowCreated = () => {
+    // Bump refreshKey to trigger EscrowList re-fetch
+    setRefreshKey(prev => prev + 1);
+  };
 
   return (
     <main className="min-h-screen bg-[#F0F0F0] text-black font-sans selection:bg-yellow-200">
       {/* Header */}
       <header className="border-b-4 border-black bg-white sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+        <div className="container mx-auto px-4 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
           <div className="flex items-center gap-3">
             <div className="bg-black text-white p-2 rounded-lg">
-              <ShieldCheck size={32} />
+              <ShieldCheck size={28} />
             </div>
-            <h1 className="text-3xl font-black tracking-tighter uppercase italic">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tighter uppercase italic">
               Freelance <span className="text-blue-600">Safe-Hands</span>
             </h1>
           </div>
@@ -27,13 +33,13 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 py-8 sm:py-12">
         {!userAddress ? (
-          <div className="text-center py-20">
-            <h2 className="text-4xl font-black mb-6 uppercase">
+          <div className="text-center py-16 sm:py-20">
+            <h2 className="text-3xl sm:text-4xl font-black mb-6 uppercase">
               Secure Your Work with <span className="underline decoration-4 decoration-blue-500">Trustless Escrow</span>
             </h2>
-            <p className="text-xl font-mono text-gray-600 max-w-2xl mx-auto mb-12">
+            <p className="text-lg sm:text-xl font-mono text-gray-600 max-w-2xl mx-auto mb-12">
               The minimalist protocol for freelancers and clients.
               Deposit funds, lock them, and release only when the job is done.
               Powered by Stellar Soroban.
@@ -43,10 +49,10 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
             {/* Left Column: Create Logic */}
             <div className="lg:col-span-5">
-              <CreateEscrowForm clientAddress={userAddress} />
+              <CreateEscrowForm clientAddress={userAddress} onSuccess={handleEscrowCreated} />
 
               <div className="mt-8 bg-blue-100 border-2 border-blue-500 p-6 rounded-lg text-blue-900">
                 <h3 className="font-bold uppercase mb-2 flex items-center gap-2">
@@ -57,26 +63,29 @@ export default function Home() {
                   <li>Client deposits XLM for a Freelancer.</li>
                   <li>Funds are locked in the Smart Contract.</li>
                   <li>Both parties must approve to release funds.</li>
+                  <li>Cancel before freelancer accepts for a refund.</li>
+                  <li>Raise a dispute if there&apos;s a disagreement.</li>
+                  <li>The Arbiter resolves disputes fairly.</li>
                 </ol>
               </div>
             </div>
 
             {/* Right Column: List */}
             <div className="lg:col-span-7">
-              <EscrowList userAddress={userAddress} />
+              <EscrowList userAddress={userAddress} refreshKey={refreshKey} />
             </div>
           </div>
         )}
       </div>
 
       {/* Footer */}
-      <footer className="border-t-4 border-black bg-white py-8 mt-12">
+      <footer className="border-t-4 border-black bg-white py-6 sm:py-8 mt-12">
         <div className="container mx-auto px-4 text-center">
           <p className="font-mono text-sm text-gray-500">
             Built on <a href="https://stellar.org/soroban" target="_blank" className="underline font-bold text-black">Stellar Soroban Testnet</a>
           </p>
           <p className="font-black text-xs uppercase mt-2 opacity-50">
-            Safe-Hands Protocol v0.1.0
+            Safe-Hands Protocol v0.2.0
           </p>
         </div>
       </footer>

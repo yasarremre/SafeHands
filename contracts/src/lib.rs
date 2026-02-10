@@ -16,19 +16,20 @@ pub enum EscrowState {
 pub struct Escrow {
     pub client: Address,
     pub freelancer: Address,
-    pub arbiter: Address, // New: Arbiter for disputes
+    pub arbiter: Address,
     pub amount: i128,
     pub token: Address,
     pub approved_by_client: bool,
     pub approved_by_freelancer: bool,
     pub state: EscrowState,
+    pub deadline: u64, // Ledger timestamp after which client can reclaim funds
 }
 
 #[contracttype]
 pub enum DataKey {
     NextEscrowId,
-    Escrow(u64), // Key for specific escrow
-    UserEscrows(Address), // Key for user's list of escrow IDs
+    Escrow(u64),
+    UserEscrows(Address),
 }
 
 #[contract]
@@ -44,11 +45,16 @@ impl SafeHandsContract {
         arbiter: Address,
         token: Address,
         amount: i128,
+        deadline_days: u64,
     ) -> u64 {
         client.require_auth();
 
         if amount <= 0 {
             panic!("Amount must be positive");
+        }
+
+        if deadline_days == 0 {
+            panic!("Deadline must be at least 1 day");
         }
 
         // Transfer funds to contract
@@ -62,6 +68,9 @@ impl SafeHandsContract {
         // Generate ID
         let escrow_id = Self::get_next_escrow_id(&env);
 
+        // Calculate deadline timestamp (current ledger time + days in seconds)
+        let deadline = env.ledger().timestamp() + (deadline_days * 86400);
+
         let escrow = Escrow {
             client: client.clone(),
             freelancer: freelancer.clone(),
@@ -71,6 +80,7 @@ impl SafeHandsContract {
             approved_by_client: false,
             approved_by_freelancer: false,
             state: EscrowState::Funded,
+            deadline,
         };
 
         // Store Escrow
@@ -100,6 +110,11 @@ impl SafeHandsContract {
 
         if escrow.state != EscrowState::Funded && escrow.state != EscrowState::Disputed {
             panic!("Escrow not in a state to be approved");
+        }
+
+        // Block approval if deadline has passed
+        if env.ledger().timestamp() > escrow.deadline {
+            panic!("Escrow deadline has passed. Use claim_timeout instead.");
         }
 
         if approver == escrow.client {
@@ -133,11 +148,6 @@ impl SafeHandsContract {
         caller.require_auth();
         let mut escrow = Self::get_escrow(env.clone(), escrow_id);
         
-        // Cancel Logic: 
-        // 1. Only Client can cancel.
-        // 2. Only if Freelancer hasn't approved (started) yet.
-        // 3. Only if State is Funded.
-
         if caller != escrow.client {
              panic!("Only client can cancel");
         }
@@ -184,7 +194,7 @@ impl SafeHandsContract {
 
         env.events().publish(
             (symbol_short!("dispute"), caller),
-            (escrow_id),
+            escrow_id,
         );
     }
 
@@ -217,6 +227,36 @@ impl SafeHandsContract {
 
         env.events().publish(
             (symbol_short!("resolve"), arbiter, winner),
+            (escrow_id, escrow.amount),
+        );
+    }
+
+    /// Claim timeout: if the deadline has passed and escrow is still active,
+    /// anyone can trigger a refund to the client.
+    pub fn claim_timeout(env: Env, escrow_id: u64) {
+        let mut escrow = Self::get_escrow(env.clone(), escrow_id);
+
+        if escrow.state != EscrowState::Funded && escrow.state != EscrowState::Disputed {
+            panic!("Escrow not in a claimable state");
+        }
+
+        if env.ledger().timestamp() <= escrow.deadline {
+            panic!("Deadline has not passed yet");
+        }
+
+        // Refund to client
+        let token_client = token::Client::new(&env, &escrow.token);
+        token_client.transfer(
+            &env.current_contract_address(),
+            &escrow.client,
+            &escrow.amount,
+        );
+
+        escrow.state = EscrowState::Cancelled;
+        env.storage().persistent().set(&DataKey::Escrow(escrow_id), &escrow);
+
+        env.events().publish(
+            (symbol_short!("timeout"), escrow.client.clone()),
             (escrow_id, escrow.amount),
         );
     }

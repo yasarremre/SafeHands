@@ -13,9 +13,10 @@ import {
 import {
   signTransaction,
 } from "@stellar/freighter-api";
+import toast from "react-hot-toast";
 
 // TODO: Deploy contract and update this ID
-export const CONTRACT_ID = "CCLF2UE7V6SGYXNORDRVDMAVQJXL2BDLQAVW3ATKJHT2IEDPZHZ74KFX";
+export const CONTRACT_ID = "CDYN4KMSDSTAFIEMXKVNWDT2DK3JGVHC242NWOPVPBFMCXA2OX5LI52K";
 export const RPC_URL = "https://soroban-testnet.stellar.org";
 export const NETWORK_PASSPHRASE = Networks.TESTNET;
 
@@ -28,7 +29,8 @@ export async function deposit(
   clientAddress: string,
   freelancerAddress: string,
   arbiterAddress: string,
-  amount: string
+  amount: string,
+  deadlineDays: number = 30
 ) {
   const contract = new Contract(CONTRACT_ID);
   // Derive Native Token ID dynamically (Wrapped XLM for Soroban)
@@ -41,11 +43,21 @@ export async function deposit(
     new Address(arbiterAddress).toScVal(),
     new Address(NATIVE_TOKEN).toScVal(),
     nativeToScVal(BigInt(amount), { type: "i128" }),
+    nativeToScVal(BigInt(deadlineDays), { type: "u64" }),
   ];
 
   const op = contract.call("deposit", ...args);
 
   return await submitTx(clientAddress, op);
+}
+
+export async function claimTimeout(escrowId: string, callerAddress: string) {
+  const contract = new Contract(CONTRACT_ID);
+  const args = [
+    nativeToScVal(BigInt(escrowId), { type: "u64" }),
+  ];
+  const op = contract.call("claim_timeout", ...args);
+  return await submitTx(callerAddress, op);
 }
 
 export async function approve(
@@ -188,8 +200,7 @@ export async function getUserEscrows(userAddress: string) {
 }
 
 
-
-// Helper to sign and submit
+// Helper to sign, submit, and POLL for transaction result
 async function submitTx(sourceAddress: string, operation: xdr.Operation) {
   const account = await server.getAccount(sourceAddress);
 
@@ -220,5 +231,32 @@ async function submitTx(sourceAddress: string, operation: xdr.Operation) {
     throw new Error(`Transaction failed with status: ${response.status}`);
   }
 
-  return response;
+  // Poll for transaction result (max 30s, every 2s)
+  const txHash = response.hash;
+  const pollResult = toast.promise(
+    pollTransaction(txHash),
+    {
+      loading: "⏳ Confirming on Stellar...",
+      success: "✅ Transaction confirmed!",
+      error: "❌ Transaction failed on-chain",
+    }
+  );
+
+  return await pollResult;
+}
+
+async function pollTransaction(txHash: string, maxAttempts = 15): Promise<rpc.Api.GetTransactionResponse> {
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const result = await server.getTransaction(txHash);
+
+    if (result.status === "SUCCESS") {
+      return result;
+    }
+    if (result.status === "FAILED") {
+      throw new Error("Transaction failed on-chain. Check Stellar Explorer for details.");
+    }
+    // status === "NOT_FOUND" means still pending, keep polling
+  }
+  throw new Error("Transaction timed out after 30 seconds. It may still succeed — check Stellar Explorer.");
 }

@@ -74,6 +74,9 @@
                     "hi": 0,
                     "lo": 500
                   }
+                },
+                {
+                  "u64": 30
                 }
               ]
             }
@@ -306,6 +309,14 @@
                       },
                       "val": {
                         "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "deadline"
+                      },
+                      "val": {
+                        "u64": 2592000
                       }
                     },
                     {
@@ -1144,6 +1155,9 @@
                     "hi": 0,
                     "lo": 500
                   }
+                },
+                {
+                  "u64": 30
                 }
               ]
             }
@@ -1464,6 +1478,14 @@
                   },
                   "val": {
                     "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "deadline"
+                  },
+                  "val": {
+                    "u64": 2592000
                   }
                 },
                 {
@@ -1818,6 +1840,14 @@
                   },
                   "val": {
                     "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "deadline"
+                  },
+                  "val": {
+                    "u64": 2592000
                   }
                 },
                 {
